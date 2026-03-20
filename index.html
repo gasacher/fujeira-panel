@@ -1,0 +1,787 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fujeira — Panel</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Syne:wght@400;600;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #0d0d0d; --s1: #161616; --s2: #1f1f1f; --s3: #282828;
+  --border: #2e2e2e; --text: #efefef; --muted: #5a5a5a; --muted2: #888;
+  --yellow: #f5e642; --green: #39ff8f; --red: #ff3f3f;
+  --orange: #ff8c2a; --blue: #4da6ff; --purple: #c084fc;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { background: var(--bg); color: var(--text); font-family: 'Syne', sans-serif; min-height: 100vh; }
+
+header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0 36px; height: 58px;
+  background: var(--s1); border-bottom: 1px solid var(--border);
+  position: sticky; top: 0; z-index: 100;
+}
+.logo { font-family: 'Bebas Neue'; font-size: 24px; letter-spacing: 4px; color: var(--yellow); }
+.logo em { color: var(--muted2); font-style: normal; font-size: 11px; font-family: 'JetBrains Mono'; letter-spacing: 2px; margin-left: 10px; }
+
+/* sync status */
+.sync-status {
+  display: flex; align-items: center; gap: 8px;
+  font-family: 'JetBrains Mono'; font-size: 11px; color: var(--muted2);
+}
+.sync-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--muted); transition: background .3s; }
+.sync-dot.ok { background: var(--green); }
+.sync-dot.loading { background: var(--orange); animation: pulse 1s infinite; }
+.sync-dot.error { background: var(--red); }
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.3} }
+
+nav { display: flex; gap: 2px; }
+nav button {
+  background: none; border: none; color: var(--muted2);
+  font-family: 'JetBrains Mono'; font-size: 11px; letter-spacing: 1.5px; text-transform: uppercase;
+  padding: 8px 16px; border-radius: 4px; cursor: pointer; transition: all .15s;
+}
+nav button:hover { color: var(--text); background: var(--s2); }
+nav button.on { color: var(--yellow); background: rgba(245,230,66,.08); }
+
+main { max-width: 1160px; margin: 0 auto; padding: 36px; }
+section { display: none; animation: fadeIn .2s ease; }
+section.on { display: block; }
+@keyframes fadeIn { from{opacity:0;transform:translateY(6px)} to{opacity:1;transform:none} }
+
+/* API URL banner */
+.api-banner {
+  background: rgba(245,230,66,.07); border: 1px solid rgba(245,230,66,.2);
+  border-radius: 8px; padding: 14px 20px; margin-bottom: 28px;
+  display: flex; align-items: center; gap: 14px;
+}
+.api-banner.hidden { display: none; }
+.api-banner input {
+  flex: 1; background: var(--bg); border: 1px solid var(--border); color: var(--text);
+  font-family: 'JetBrains Mono'; font-size: 12px; padding: 8px 12px; border-radius: 5px; outline: none;
+}
+.api-banner input:focus { border-color: var(--yellow); }
+.api-label { font-family: 'JetBrains Mono'; font-size: 11px; color: var(--yellow); letter-spacing: 1px; white-space: nowrap; }
+
+/* KPIS */
+.kpis { display: grid; grid-template-columns: repeat(5,1fr); gap: 14px; margin-bottom: 36px; }
+.kpi {
+  background: var(--s1); border: 1px solid var(--border); border-radius: 10px;
+  padding: 20px 18px; position: relative; overflow: hidden;
+}
+.kpi-bar { position: absolute; bottom:0; left:0; right:0; height:3px; }
+.kpi-label { font-family:'JetBrains Mono'; font-size:10px; color:var(--muted); letter-spacing:2px; text-transform:uppercase; margin-bottom:8px; }
+.kpi-val { font-family:'Bebas Neue'; font-size:34px; letter-spacing:1px; line-height:1; }
+.kpi-sub { font-size:11px; color:var(--muted); margin-top:4px; }
+
+/* SECTION HEADER */
+.sh { display:flex; align-items:center; justify-content:space-between; margin-bottom:20px; }
+.sh-title { font-family:'Bebas Neue'; font-size:20px; letter-spacing:2px; color:var(--yellow); }
+
+/* BUTTONS */
+.btn { font-family:'JetBrains Mono'; font-size:11px; letter-spacing:1px; text-transform:uppercase; padding:9px 20px; border-radius:5px; cursor:pointer; border:none; transition:all .15s; }
+.btn-primary { background:var(--yellow); color:#000; font-weight:500; }
+.btn-primary:hover { opacity:.85; }
+.btn-ghost { background:transparent; color:var(--muted2); border:1px solid var(--border); }
+.btn-ghost:hover { color:var(--text); border-color:var(--muted2); }
+.btn-sm { padding:5px 12px; font-size:10px; }
+.btn:disabled { opacity:.4; cursor:not-allowed; }
+
+/* TABLE */
+.tbl-wrap { overflow-x:auto; }
+table { width:100%; border-collapse:collapse; font-size:13px; }
+thead th { font-family:'JetBrains Mono'; font-size:10px; letter-spacing:2px; text-transform:uppercase; color:var(--muted); text-align:left; padding:10px 14px; border-bottom:1px solid var(--border); }
+tbody tr { border-bottom:1px solid var(--border); transition:background .1s; }
+tbody tr:hover { background:var(--s2); }
+tbody td { padding:13px 14px; vertical-align:middle; }
+.mono { font-family:'JetBrains Mono'; font-size:11px; color:var(--muted); }
+
+/* BADGES */
+.badge { display:inline-block; padding:3px 10px; border-radius:20px; font-family:'JetBrains Mono'; font-size:10px; letter-spacing:1px; text-transform:uppercase; }
+.bg { background:rgba(57,255,143,.1); color:var(--green); }
+.br { background:rgba(255,63,63,.1); color:var(--red); }
+.by { background:rgba(245,230,66,.1); color:var(--yellow); }
+.bo { background:rgba(255,140,42,.1); color:var(--orange); }
+.bb { background:rgba(77,166,255,.1); color:var(--blue); }
+.bp { background:rgba(192,132,252,.1); color:var(--purple); }
+
+/* FILTERS */
+.filters { display:flex; gap:10px; margin-bottom:16px; }
+.filters input, .filters select { background:var(--s1); border:1px solid var(--border); color:var(--text); font-family:'Syne'; font-size:13px; padding:8px 12px; border-radius:5px; outline:none; transition:border-color .15s; }
+.filters input { flex:1; }
+.filters input:focus, .filters select:focus { border-color:var(--yellow); }
+.filters select option { background:var(--s1); }
+
+/* MODAL */
+.overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,.75); z-index:200; align-items:center; justify-content:center; }
+.overlay.on { display:flex; }
+.modal { background:var(--s1); border:1px solid var(--border); border-radius:12px; padding:30px 34px; width:500px; max-width:95vw; max-height:90vh; overflow-y:auto; }
+.modal-title { font-family:'Bebas Neue'; font-size:22px; letter-spacing:2px; color:var(--yellow); margin-bottom:24px; }
+.field { margin-bottom:16px; }
+.field label { display:block; font-family:'JetBrains Mono'; font-size:10px; letter-spacing:2px; text-transform:uppercase; color:var(--muted); margin-bottom:6px; }
+.field input, .field select { width:100%; background:var(--bg); border:1px solid var(--border); color:var(--text); font-family:'Syne'; font-size:14px; padding:10px 13px; border-radius:6px; outline:none; transition:border-color .15s; }
+.field input:focus, .field select:focus { border-color:var(--yellow); }
+.field select option { background:var(--s1); }
+.grid2 { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+.modal-actions { display:flex; gap:10px; justify-content:flex-end; margin-top:26px; }
+
+/* GASTOS */
+.gastos-grid { display:flex; flex-direction:column; gap:10px; }
+.gasto-row { display:flex; align-items:center; justify-content:space-between; background:var(--s1); border:1px solid var(--border); border-radius:8px; padding:15px 20px; gap:20px; }
+.gasto-name { font-size:14px; font-weight:600; }
+.gasto-tipo-label { font-family:'JetBrains Mono'; font-size:10px; color:var(--muted); letter-spacing:1px; text-transform:uppercase; margin-top:2px; }
+.gasto-amt { font-family:'Bebas Neue'; font-size:24px; color:var(--red); letter-spacing:1px; }
+.gasto-date { font-size:11px; color:var(--muted); margin-top:1px; }
+
+/* INSTAGRAM */
+.ig-stats { display:grid; grid-template-columns:repeat(4,1fr); gap:14px; margin-bottom:24px; }
+.ig-stat { background:var(--s1); border:1px solid var(--border); border-radius:8px; padding:16px 18px; }
+.ig-stat-val { font-family:'Bebas Neue'; font-size:32px; letter-spacing:1px; }
+.ig-stat-label { font-family:'JetBrains Mono'; font-size:10px; color:var(--muted); letter-spacing:2px; text-transform:uppercase; margin-top:2px; }
+
+.ig-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(230px,1fr)); gap:14px; }
+.ig-card { background:var(--s1); border:1px solid var(--border); border-radius:10px; padding:18px; transition:border-color .2s; }
+.ig-card.pub-web { border-color:rgba(57,255,143,.4); }
+.ig-card.pub-ig { border-color:rgba(192,132,252,.35); }
+.ig-card.pend { border-color:rgba(255,63,63,.2); }
+.ig-card-name { font-size:14px; font-weight:600; margin-bottom:3px; padding-right:60px; }
+.ig-card-meta { font-family:'JetBrains Mono'; font-size:10px; color:var(--muted); letter-spacing:1px; text-transform:uppercase; margin-bottom:14px; }
+.ig-tag { position:absolute; top:14px; right:14px; font-family:'JetBrains Mono'; font-size:9px; letter-spacing:1px; text-transform:uppercase; padding:2px 8px; border-radius:20px; }
+.ig-card { position:relative; }
+
+.checks { display:flex; flex-direction:column; gap:8px; }
+.check-row { display:flex; align-items:center; justify-content:space-between; }
+.check-label { font-size:12px; color:var(--muted2); display:flex; align-items:center; gap:6px; }
+.toggle-wrap { cursor:pointer; }
+.track { width:38px; height:21px; background:var(--border); border-radius:11px; position:relative; transition:background .2s; flex-shrink:0; }
+.track.on { background:var(--green); }
+.track.on-purple { background:var(--purple); }
+.thumb { position:absolute; top:2px; left:2px; width:17px; height:17px; background:#fff; border-radius:50%; transition:transform .2s; }
+.track.on .thumb, .track.on-purple .thumb { transform:translateX(17px); }
+
+.card-actions { display:flex; justify-content:flex-end; margin-top:12px; }
+
+.empty { text-align:center; padding:60px; font-family:'JetBrains Mono'; font-size:11px; color:var(--muted); letter-spacing:2px; text-transform:uppercase; }
+
+/* LOADING OVERLAY */
+.loading-screen { display:none; position:fixed; inset:0; background:rgba(0,0,0,.6); z-index:300; align-items:center; justify-content:center; flex-direction:column; gap:14px; }
+.loading-screen.on { display:flex; }
+.spinner { width:32px; height:32px; border:3px solid var(--border); border-top-color:var(--yellow); border-radius:50%; animation:spin .7s linear infinite; }
+@keyframes spin { to{transform:rotate(360deg)} }
+.loading-text { font-family:'JetBrains Mono'; font-size:12px; color:var(--muted2); letter-spacing:2px; }
+
+@media(max-width:680px){
+  .kpis { grid-template-columns:1fr 1fr; }
+  .ig-stats { grid-template-columns:1fr 1fr; }
+  main { padding:20px 16px; }
+  header { padding:0 16px; }
+  .grid2 { grid-template-columns:1fr; }
+  nav button { padding:8px 10px; font-size:10px; }
+}
+</style>
+</head>
+<body>
+
+<div class="loading-screen" id="loading">
+  <div class="spinner"></div>
+  <div class="loading-text">Cargando datos...</div>
+</div>
+
+<header>
+  <div class="logo">FUJEIRA <em>PANEL</em></div>
+  <nav>
+    <button class="on" onclick="goNav('dashboard',this)">Dashboard</button>
+    <button onclick="goNav('stock',this)">Stock</button>
+    <button onclick="goNav('ventas',this)">Ventas</button>
+    <button onclick="goNav('ganancia',this)">Ganancia</button>
+    <button onclick="goNav('gastos',this)">Gastos</button>
+    <button onclick="goNav('instagram',this)">Instagram</button>
+  </nav>
+  <div class="sync-status">
+    <div class="sync-dot" id="sync-dot"></div>
+    <span id="sync-label">sin conectar</span>
+  </div>
+</header>
+
+<main>
+
+<!-- API CONFIG BANNER -->
+<div class="api-banner" id="api-banner">
+  <span class="api-label">🔗 URL Apps Script</span>
+  <input id="api-url" placeholder="Pegá aquí tu URL de Apps Script..." />
+  <button class="btn btn-primary" onclick="saveApiUrl()">Conectar</button>
+</div>
+
+<!-- DASHBOARD -->
+<section id="dashboard" class="on">
+  <div class="kpis">
+    <div class="kpi"><div class="kpi-bar" style="background:var(--green)"></div>
+      <div class="kpi-label">Ganancia neta</div>
+      <div class="kpi-val" style="color:var(--green)" id="kpi-gan">—</div>
+      <div class="kpi-sub">ventas − costos</div>
+    </div>
+    <div class="kpi"><div class="kpi-bar" style="background:var(--red)"></div>
+      <div class="kpi-label">Gastos totales</div>
+      <div class="kpi-val" style="color:var(--red)" id="kpi-gas">—</div>
+      <div class="kpi-sub">acumulados</div>
+    </div>
+    <div class="kpi"><div class="kpi-bar" style="background:var(--orange)"></div>
+      <div class="kpi-label">Unidades vendidas</div>
+      <div class="kpi-val" style="color:var(--orange)" id="kpi-uv">—</div>
+      <div class="kpi-sub">total histórico</div>
+    </div>
+    <div class="kpi"><div class="kpi-bar" style="background:var(--purple)"></div>
+      <div class="kpi-label">En IG, falta web</div>
+      <div class="kpi-val" style="color:var(--purple)" id="kpi-igpend">—</div>
+      <div class="kpi-sub">pendientes de subir</div>
+    </div>
+    <div class="kpi"><div class="kpi-bar" style="background:var(--yellow)"></div>
+      <div class="kpi-label">Stock disponible</div>
+      <div class="kpi-val" id="kpi-stock">—</div>
+      <div class="kpi-sub">unidades</div>
+    </div>
+  </div>
+  <div class="sh"><div class="sh-title">Últimas ventas</div></div>
+  <div class="tbl-wrap">
+    <table>
+      <thead><tr><th>Producto</th><th>Fecha</th><th>Precio</th><th>Ganancia</th></tr></thead>
+      <tbody id="dash-tbody"></tbody>
+    </table>
+  </div>
+</section>
+
+<!-- STOCK -->
+<section id="stock">
+  <div class="sh">
+    <div class="sh-title">Stock</div>
+    <button class="btn btn-primary" onclick="openM('m-stock')">+ Agregar remera</button>
+  </div>
+  <div class="filters">
+    <input id="fst-q" placeholder="Buscar..." oninput="rStock()">
+    <select id="fst-est" onchange="rStock()">
+      <option value="">Todos</option>
+      <option value="disponible">Disponible</option>
+      <option value="vendida">Vendida</option>
+      <option value="reservada">Reservada</option>
+    </select>
+  </div>
+  <div class="tbl-wrap">
+    <table>
+      <thead><tr><th>#</th><th>Producto</th><th>Categoría</th><th>Proveedor</th><th>Talle</th><th>Costo</th><th>Precio</th><th>Ganancia</th><th>Estado</th><th></th></tr></thead>
+      <tbody id="stock-tbody"></tbody>
+    </table>
+  </div>
+</section>
+
+<!-- VENTAS -->
+<section id="ventas">
+  <div class="sh">
+    <div class="sh-title">Ventas</div>
+    <button class="btn btn-primary" onclick="openM('m-venta')">+ Registrar venta</button>
+  </div>
+  <div class="tbl-wrap">
+    <table>
+      <thead><tr><th>Producto</th><th>Fecha</th><th>Precio venta</th><th>Costo</th><th>Ganancia</th></tr></thead>
+      <tbody id="ventas-tbody"></tbody>
+    </table>
+  </div>
+</section>
+
+<!-- GANANCIA -->
+<section id="ganancia">
+  <div class="sh"><div class="sh-title">Ganancia por venta</div></div>
+  <div class="tbl-wrap">
+    <table>
+      <thead><tr><th>Producto</th><th>Fecha</th><th>Precio venta</th><th>Costo</th><th>Ganancia</th></tr></thead>
+      <tbody id="gan-tbody"></tbody>
+    </table>
+  </div>
+</section>
+
+<!-- GASTOS -->
+<section id="gastos">
+  <div class="sh">
+    <div class="sh-title">Gastos</div>
+    <button class="btn btn-primary" onclick="openM('m-gasto')">+ Agregar gasto</button>
+  </div>
+  <div class="gastos-grid" id="gastos-list"></div>
+</section>
+
+<!-- INSTAGRAM -->
+<section id="instagram">
+  <div class="sh">
+    <div class="sh-title">Checklist Instagram → Web</div>
+    <button class="btn btn-primary" onclick="openM('m-ig')">+ Agregar remera</button>
+  </div>
+  <div class="ig-stats">
+    <div class="ig-stat">
+      <div class="ig-stat-val" style="color:var(--green)" id="ig-s-web">0</div>
+      <div class="ig-stat-label">✅ En IG + Web</div>
+    </div>
+    <div class="ig-stat">
+      <div class="ig-stat-val" style="color:var(--purple)" id="ig-s-igonly">0</div>
+      <div class="ig-stat-label">📸 En IG, falta web</div>
+    </div>
+    <div class="ig-stat">
+      <div class="ig-stat-val" style="color:var(--red)" id="ig-s-pend">0</div>
+      <div class="ig-stat-label">⏳ Sin publicar</div>
+    </div>
+    <div class="ig-stat">
+      <div class="ig-stat-val" style="color:var(--blue)" id="ig-s-dem">0</div>
+      <div class="ig-stat-label">💬 Por demanda</div>
+    </div>
+  </div>
+  <p style="font-size:12px;color:var(--muted2);margin-bottom:20px;font-family:'JetBrains Mono';letter-spacing:.5px">
+    Tu socio marca <strong style="color:var(--purple)">📸 Publicada en IG</strong> · Vos marcás <strong style="color:var(--green)">🌐 Subida a la web</strong>
+  </p>
+  <div class="ig-grid" id="ig-grid"></div>
+</section>
+
+</main>
+
+<!-- MODAL STOCK -->
+<div class="overlay" id="m-stock">
+  <div class="modal">
+    <div class="modal-title">Nueva Remera — Stock</div>
+    <div class="grid2">
+      <div class="field"><label>Nombre</label><input id="ss-nom" placeholder="Ej: Remera Roma 1990"></div>
+      <div class="field"><label>Categoría</label>
+        <select id="ss-cat"><option>Fujeira Retro Series</option><option>Importadas</option><option>Record Sports</option><option>Otra</option></select>
+      </div>
+    </div>
+    <div class="grid2">
+      <div class="field"><label>Proveedor</label><input id="ss-prov" placeholder="Ej: Julian"></div>
+      <div class="field"><label>Talle</label>
+        <select id="ss-tal"><option>S</option><option>M</option><option>L</option><option>XL</option><option>XXL</option></select>
+      </div>
+    </div>
+    <div class="grid2">
+      <div class="field"><label>Precio Costo ($)</label><input id="ss-cos" type="number" placeholder="0"></div>
+      <div class="field"><label>Precio Venta ($)</label><input id="ss-ven" type="number" placeholder="0"></div>
+    </div>
+    <div class="field"><label>¿Agregar también al checklist Instagram?</label>
+      <select id="ss-ig"><option value="no">No por ahora</option><option value="pendiente">Sí, como pendiente</option><option value="ig">Sí, ya publicada en IG</option></select>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeM('m-stock')">Cancelar</button>
+      <button class="btn btn-primary" id="btn-add-stock" onclick="addStock()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL VENTA -->
+<div class="overlay" id="m-venta">
+  <div class="modal">
+    <div class="modal-title">Registrar Venta</div>
+    <div class="field"><label>Remera (stock disponible)</label><select id="vv-prod"></select></div>
+    <div class="grid2">
+      <div class="field"><label>Fecha</label><input id="vv-fecha" type="date"></div>
+      <div class="field"><label>Precio de venta ($)</label><input id="vv-precio" type="number" placeholder="0"></div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeM('m-venta')">Cancelar</button>
+      <button class="btn btn-primary" id="btn-add-venta" onclick="addVenta()">Registrar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL GASTO -->
+<div class="overlay" id="m-gasto">
+  <div class="modal">
+    <div class="modal-title">Nuevo Gasto</div>
+    <div class="field"><label>Concepto</label><input id="gg-nom" placeholder="Ej: Stickers packaging"></div>
+    <div class="grid2">
+      <div class="field"><label>Tipo</label>
+        <select id="gg-tipo"><option>Packaging</option><option>Camisetas</option><option>Servicios</option><option>Marketing</option><option>Otro</option></select>
+      </div>
+      <div class="field"><label>Monto ($)</label><input id="gg-monto" type="number" placeholder="0"></div>
+    </div>
+    <div class="grid2">
+      <div class="field"><label>Fecha</label><input id="gg-fecha" type="date"></div>
+      <div class="field"><label>Detalle (opcional)</label><input id="gg-det" placeholder="Ej: 100 stickers"></div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeM('m-gasto')">Cancelar</button>
+      <button class="btn btn-primary" id="btn-add-gasto" onclick="addGasto()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL INSTAGRAM -->
+<div class="overlay" id="m-ig">
+  <div class="modal">
+    <div class="modal-title">Agregar al Checklist IG</div>
+    <div class="field"><label>Nombre / descripción</label><input id="ig-nom" placeholder="Ej: Camiseta Juventus 96/97"></div>
+    <div class="grid2">
+      <div class="field"><label>Categoría</label>
+        <select id="ig-cat"><option>Fujeira Retro Series</option><option>Importadas</option><option>Record Sports</option><option>Otra</option></select>
+      </div>
+      <div class="field"><label>Talle</label>
+        <select id="ig-tal"><option>S</option><option>M</option><option>L</option><option>XL</option><option>XXL</option><option>Varios</option></select>
+      </div>
+    </div>
+    <div class="field"><label>Tipo</label>
+      <select id="ig-tipo"><option value="demanda">Por demanda (sin stock físico)</option><option value="stock">En stock físico</option></select>
+    </div>
+    <div class="field"><label>Estado actual</label>
+      <select id="ig-est"><option value="pendiente">Pendiente de publicar en IG</option><option value="ig">Ya publicada en IG</option><option value="web">Publicada en IG + subida a la web</option></select>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeM('m-ig')">Cancelar</button>
+      <button class="btn btn-primary" id="btn-add-ig" onclick="addIG()">Agregar</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ===== CONFIG =====
+const API_KEY = 'fujeira_api_url';
+let API_URL = localStorage.getItem(API_KEY) || '';
+
+// ===== LOCAL STATE (cache) =====
+let D = { stock:[], ventas:[], ganancia:[], gastos:[], instagram:[] };
+
+// ===== UTILS =====
+const fmt = n => '$' + Number(n||0).toLocaleString('es-AR');
+const today = () => new Date().toISOString().slice(0,10);
+const uid = () => Date.now() + Math.random().toString(36).slice(2,6);
+
+function setSyncStatus(state, label) {
+  const dot = document.getElementById('sync-dot');
+  const lbl = document.getElementById('sync-label');
+  dot.className = 'sync-dot ' + state;
+  lbl.textContent = label;
+}
+
+function showLoading(on) {
+  document.getElementById('loading').classList.toggle('on', on);
+}
+
+// ===== API =====
+async function api(action, data) {
+  if (!API_URL) { alert('Primero conectá tu Google Sheet arriba ↑'); return null; }
+  setSyncStatus('loading', 'sincronizando...');
+  try {
+    const params = new URLSearchParams({ action });
+    if (data) params.set('data', JSON.stringify(data));
+    if (data && data.id) params.set('id', data.id);
+    const res = await fetch(API_URL + '?' + params.toString());
+    const json = await res.json();
+    if (json.error) throw new Error(json.error);
+    setSyncStatus('ok', 'sincronizado');
+    return json;
+  } catch(e) {
+    setSyncStatus('error', 'error de conexión');
+    console.error(e);
+    return null;
+  }
+}
+
+async function loadAll() {
+  if (!API_URL) { renderAll(); return; }
+  showLoading(true);
+  setSyncStatus('loading', 'cargando...');
+  try {
+    const res = await fetch(API_URL + '?action=getAll');
+    const json = await res.json();
+    if (json.error) throw new Error(json.error);
+    D.stock     = json.stock     || [];
+    D.ventas    = json.ventas    || [];
+    D.ganancia  = json.ganancia  || [];
+    D.gastos    = json.gastos    || [];
+    D.instagram = json.instagram || [];
+    setSyncStatus('ok', 'conectado');
+  } catch(e) {
+    setSyncStatus('error', 'error al cargar');
+  }
+  showLoading(false);
+  renderAll();
+}
+
+// ===== API URL =====
+function saveApiUrl() {
+  const url = document.getElementById('api-url').value.trim();
+  if (!url) return alert('Pegá la URL del Apps Script');
+  API_URL = url;
+  localStorage.setItem(API_KEY, url);
+  document.getElementById('api-banner').classList.add('hidden');
+  loadAll();
+}
+
+// Al inicio: si ya tiene URL guardada, ocultar banner
+window.addEventListener('load', () => {
+  if (API_URL) {
+    document.getElementById('api-banner').classList.add('hidden');
+    document.getElementById('api-url').value = API_URL;
+    loadAll();
+  } else {
+    setSyncStatus('', 'sin conectar');
+  }
+});
+
+// ===== NAV =====
+function goNav(id, btn) {
+  document.querySelectorAll('section').forEach(s => s.classList.remove('on'));
+  document.querySelectorAll('nav button').forEach(b => b.classList.remove('on'));
+  document.getElementById(id).classList.add('on');
+  btn.classList.add('on');
+  renderAll();
+}
+
+// ===== MODAL =====
+function openM(id) {
+  if (id==='m-venta') { fillVentaSel(); document.getElementById('vv-fecha').value=today(); }
+  if (id==='m-gasto') document.getElementById('gg-fecha').value=today();
+  document.getElementById(id).classList.add('on');
+}
+function closeM(id) { document.getElementById(id).classList.remove('on'); }
+document.querySelectorAll('.overlay').forEach(o => o.addEventListener('click', e => { if(e.target===o) o.classList.remove('on'); }));
+
+function setLoading(btnId, on) {
+  const btn = document.getElementById(btnId);
+  if (btn) { btn.disabled = on; btn.textContent = on ? 'Guardando...' : btn.dataset.label || btn.textContent; }
+}
+
+// ===== STOCK =====
+async function addStock() {
+  const nom = document.getElementById('ss-nom').value.trim();
+  const cos = parseFloat(document.getElementById('ss-cos').value)||0;
+  const pre = parseFloat(document.getElementById('ss-ven').value)||0;
+  if (!nom) return alert('Ingresá el nombre');
+  const item = { id: uid(), producto: nom, categoria: document.getElementById('ss-cat').value, proveedor: document.getElementById('ss-prov').value, talle: document.getElementById('ss-tal').value, costo: cos, precioVenta: pre, ganancia: pre-cos, estado: 'disponible' };
+  setLoading('btn-add-stock', true);
+  const ok = await api('addStock', item);
+  setLoading('btn-add-stock', false);
+  if (!ok) return;
+  D.stock.push(item);
+  // ig opcional
+  const igOpt = document.getElementById('ss-ig').value;
+  if (igOpt !== 'no') {
+    const igItem = { id: uid(), producto: nom, categoria: document.getElementById('ss-cat').value, talle: document.getElementById('ss-tal').value, tipo: 'stock', estadoIG: igOpt==='ig'?'ig':'pendiente', estadoWeb: 'no' };
+    await api('addIG', igItem);
+    D.instagram.push(igItem);
+  }
+  ['ss-nom','ss-prov','ss-cos','ss-ven'].forEach(i => document.getElementById(i).value='');
+  closeM('m-stock'); renderAll();
+}
+
+function rStock() {
+  const q = document.getElementById('fst-q').value.toLowerCase();
+  const est = document.getElementById('fst-est').value;
+  const rows = D.stock.filter(s => (!q||((s.producto||'').toLowerCase().includes(q))) && (!est||s.estado===est));
+  const tb = document.getElementById('stock-tbody');
+  if (!rows.length) { tb.innerHTML='<tr><td colspan="10"><div class="empty">Sin resultados</div></td></tr>'; return; }
+  const estBadge = e => e==='disponible'?'by':e==='vendida'?'br':'bo';
+  tb.innerHTML = rows.map(s=>`<tr>
+    <td class="mono">${String(s.id).slice(-4)}</td>
+    <td><strong>${s.producto||''}</strong></td>
+    <td class="mono">${s.categoria||''}</td>
+    <td style="font-size:13px">${s.proveedor||''}</td>
+    <td><span class="badge bb">${s.talle||''}</span></td>
+    <td>${fmt(s.costo)}</td>
+    <td>${fmt(s.precioVenta)}</td>
+    <td style="color:var(--green)">${fmt((s.precioVenta||0)-(s.costo||0))}</td>
+    <td><span class="badge ${estBadge(s.estado)}">${s.estado||''}</span></td>
+    <td><button class="btn btn-ghost btn-sm" onclick="delStock('${s.id}')">✕</button></td>
+  </tr>`).join('');
+}
+
+async function delStock(id) {
+  if (!confirm('¿Eliminar esta remera?')) return;
+  await api('deleteStock', { id });
+  D.stock = D.stock.filter(s => String(s.id)!==String(id));
+  renderAll();
+}
+
+// ===== VENTAS =====
+function fillVentaSel() {
+  const sel = document.getElementById('vv-prod');
+  const disp = D.stock.filter(s => s.estado==='disponible');
+  sel.innerHTML = disp.length
+    ? disp.map(s=>`<option value="${s.id}">${s.producto} · ${s.talle} | ${fmt(s.precioVenta)}</option>`).join('')
+    : '<option>Sin stock disponible</option>';
+}
+
+async function addVenta() {
+  const sid = document.getElementById('vv-prod').value;
+  const pre = parseFloat(document.getElementById('vv-precio').value)||0;
+  const fecha = document.getElementById('vv-fecha').value;
+  const item = D.stock.find(s => String(s.id)===String(sid));
+  if (!item) return alert('Seleccioná una remera');
+  if (!pre) return alert('Ingresá el precio de venta');
+  const venta = { id: uid(), stockId: item.id, producto: item.producto, fecha, precioVenta: pre, costo: item.costo||0, ganancia: pre-(item.costo||0) };
+  setLoading('btn-add-venta', true);
+  const ok = await api('addVenta', venta);
+  setLoading('btn-add-venta', false);
+  if (!ok) return;
+  item.estado = 'vendida';
+  D.ventas.push(venta);
+  D.ganancia.push({ id: venta.id, producto: item.producto, fecha, precioVenta: pre, costo: item.costo||0, ganancia: pre-(item.costo||0) });
+  document.getElementById('vv-precio').value='';
+  closeM('m-venta'); renderAll();
+}
+
+function rVentas() {
+  const tb = document.getElementById('ventas-tbody');
+  if (!D.ventas.length) { tb.innerHTML='<tr><td colspan="5"><div class="empty">Sin ventas registradas</div></td></tr>'; return; }
+  tb.innerHTML = [...D.ventas].reverse().map(v=>`<tr>
+    <td><strong>${v.producto||''}</strong></td>
+    <td class="mono">${v.fecha||''}</td>
+    <td>${fmt(v.precioVenta)}</td>
+    <td style="color:var(--muted2)">${fmt(v.costo)}</td>
+    <td style="color:var(--green);font-weight:600">${fmt(v.ganancia)}</td>
+  </tr>`).join('');
+}
+
+// ===== GANANCIA =====
+function rGanancia() {
+  const tb = document.getElementById('gan-tbody');
+  const src = D.ganancia.length ? D.ganancia : D.ventas;
+  if (!src.length) { tb.innerHTML='<tr><td colspan="5"><div class="empty">Sin datos aún</div></td></tr>'; return; }
+  tb.innerHTML = [...src].reverse().map(v=>`<tr>
+    <td><strong>${v.producto||''}</strong></td>
+    <td class="mono">${v.fecha||''}</td>
+    <td>${fmt(v.precioVenta)}</td>
+    <td style="color:var(--muted2)">${fmt(v.costo)}</td>
+    <td style="color:var(--green);font-weight:600">${fmt(v.ganancia||(v.precioVenta-v.costo))}</td>
+  </tr>`).join('');
+}
+
+// ===== GASTOS =====
+async function addGasto() {
+  const nom = document.getElementById('gg-nom').value.trim();
+  const monto = parseFloat(document.getElementById('gg-monto').value)||0;
+  if (!nom||!monto) return alert('Completá nombre y monto');
+  const item = { id: uid(), concepto: nom, tipo: document.getElementById('gg-tipo').value, monto, fecha: document.getElementById('gg-fecha').value, detalle: document.getElementById('gg-det').value };
+  setLoading('btn-add-gasto', true);
+  const ok = await api('addGasto', item);
+  setLoading('btn-add-gasto', false);
+  if (!ok) return;
+  D.gastos.push(item);
+  ['gg-nom','gg-monto','gg-det'].forEach(i => document.getElementById(i).value='');
+  closeM('m-gasto'); renderAll();
+}
+
+function rGastos() {
+  const el = document.getElementById('gastos-list');
+  if (!D.gastos.length) { el.innerHTML='<div class="empty">Sin gastos registrados</div>'; return; }
+  el.innerHTML = [...D.gastos].reverse().map(g=>`
+    <div class="gasto-row">
+      <div>
+        <div class="gasto-name">${g.concepto||''}${g.detalle?` <span style="color:var(--muted);font-size:12px">— ${g.detalle}</span>`:''}</div>
+        <div class="gasto-tipo-label">${g.tipo||''}</div>
+      </div>
+      <div style="text-align:right">
+        <div class="gasto-amt">${fmt(g.monto)}</div>
+        <div class="gasto-date">${g.fecha||'—'}</div>
+      </div>
+    </div>`).join('');
+}
+
+// ===== INSTAGRAM =====
+async function addIG() {
+  const nom = document.getElementById('ig-nom').value.trim();
+  if (!nom) return alert('Ingresá el nombre');
+  const est = document.getElementById('ig-est').value;
+  const item = { id: uid(), producto: nom, categoria: document.getElementById('ig-cat').value, talle: document.getElementById('ig-tal').value, tipo: document.getElementById('ig-tipo').value, estadoIG: est==='pendiente'?'pendiente':'ig', estadoWeb: est==='web'?'si':'no' };
+  setLoading('btn-add-ig', true);
+  const ok = await api('addIG', item);
+  setLoading('btn-add-ig', false);
+  if (!ok) return;
+  D.instagram.push(item);
+  document.getElementById('ig-nom').value='';
+  closeM('m-ig'); renderIG(); updateKPIs();
+}
+
+async function toggleIGField(id, field) {
+  const item = D.instagram.find(i => String(i.id)===String(id));
+  if (!item) return;
+  if (field==='ig') item.estadoIG = item.estadoIG==='ig' ? 'pendiente' : 'ig';
+  if (field==='web') item.estadoWeb = item.estadoWeb==='si' ? 'no' : 'si';
+  await api('updateIG', item);
+  renderIG(); updateKPIs();
+}
+
+async function delIG(id) {
+  if (!confirm('¿Eliminar del checklist?')) return;
+  await api('deleteIG', { id });
+  D.instagram = D.instagram.filter(i => String(i.id)!==String(id));
+  renderIG(); updateKPIs();
+}
+
+function renderIG() {
+  const webY = D.instagram.filter(i=>i.estadoIG==='ig'&&i.estadoWeb==='si').length;
+  const igOnly = D.instagram.filter(i=>i.estadoIG==='ig'&&i.estadoWeb!=='si').length;
+  const pend = D.instagram.filter(i=>i.estadoIG!=='ig').length;
+  const dem = D.instagram.filter(i=>i.tipo==='demanda').length;
+
+  document.getElementById('ig-s-web').textContent = webY;
+  document.getElementById('ig-s-igonly').textContent = igOnly;
+  document.getElementById('ig-s-pend').textContent = pend;
+  document.getElementById('ig-s-dem').textContent = dem;
+  document.getElementById('kpi-igpend').textContent = igOnly;
+
+  const grid = document.getElementById('ig-grid');
+  if (!D.instagram.length) { grid.innerHTML='<div class="empty">Sin remeras en el checklist</div>'; return; }
+
+  // orden: pendientes primero, luego IG sin web, luego completas
+  const sorted = [...D.instagram].sort((a,b) => {
+    const rank = i => i.estadoIG!=='ig' ? 0 : i.estadoWeb!=='si' ? 1 : 2;
+    return rank(a)-rank(b);
+  });
+
+  grid.innerHTML = sorted.map(i => {
+    const enIG = i.estadoIG==='ig';
+    const enWeb = i.estadoWeb==='si';
+    const cardClass = enIG&&enWeb ? 'pub-web' : enIG ? 'pub-ig' : 'pend';
+    const tagClass = i.tipo==='demanda' ? 'bb' : 'by';
+    return `<div class="ig-card ${cardClass}">
+      <span class="ig-tag badge ${tagClass}">${i.tipo==='demanda'?'demanda':'stock'}</span>
+      <div class="ig-card-name">${i.producto||''}</div>
+      <div class="ig-card-meta">${i.categoria||''} · ${i.talle||''}</div>
+      <div class="checks">
+        <div class="check-row">
+          <span class="check-label">📸 Publicada en IG</span>
+          <div class="toggle-wrap" onclick="toggleIGField('${i.id}','ig')">
+            <div class="track ${enIG?'on-purple':''}"><div class="thumb"></div></div>
+          </div>
+        </div>
+        <div class="check-row">
+          <span class="check-label">🌐 Subida a la web</span>
+          <div class="toggle-wrap" onclick="toggleIGField('${i.id}','web')">
+            <div class="track ${enWeb?'on':''}"><div class="thumb"></div></div>
+          </div>
+        </div>
+      </div>
+      <div class="card-actions">
+        <button class="btn btn-ghost btn-sm" onclick="delIG('${i.id}')">✕</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ===== DASHBOARD =====
+function updateKPIs() {
+  const gan = D.ventas.reduce((a,v)=>a+(Number(v.ganancia)||(Number(v.precioVenta)-Number(v.costo))),0);
+  const gas = D.gastos.reduce((a,g)=>a+Number(g.monto||0),0);
+  const disp = D.stock.filter(s=>s.estado==='disponible').length;
+  document.getElementById('kpi-gan').textContent = fmt(gan);
+  document.getElementById('kpi-gas').textContent = fmt(gas);
+  document.getElementById('kpi-uv').textContent = D.ventas.length;
+  document.getElementById('kpi-stock').textContent = disp;
+
+  const tb = document.getElementById('dash-tbody');
+  const rec = [...D.ventas].reverse().slice(0,5);
+  if (!rec.length) { tb.innerHTML='<tr><td colspan="4"><div class="empty">Sin ventas aún</div></td></tr>'; return; }
+  tb.innerHTML = rec.map(v=>`<tr>
+    <td><strong>${v.producto||''}</strong></td>
+    <td class="mono">${v.fecha||''}</td>
+    <td>${fmt(v.precioVenta)}</td>
+    <td style="color:var(--green);font-weight:600">${fmt(v.ganancia||(v.precioVenta-v.costo))}</td>
+  </tr>`).join('');
+}
+
+function renderAll() { rStock(); rVentas(); rGanancia(); rGastos(); renderIG(); updateKPIs(); }
+</script>
+</body>
+</html>
